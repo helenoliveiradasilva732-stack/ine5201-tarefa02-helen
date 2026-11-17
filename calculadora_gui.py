@@ -4,7 +4,7 @@ import ast
 import math
 import operator
 import tkinter as tk
-from typing import Union
+from typing import List, Union
 
 
 Numero = Union[int, float]
@@ -50,6 +50,12 @@ def calcular(expressao: str) -> Numero:
     return resultado
 
 
+def _formatar_resultado(resultado: Numero) -> str:
+    if isinstance(resultado, float):
+        return format(resultado, ".12g")
+    return str(resultado)
+
+
 class CalculadoraApp:
     """Janela e eventos da calculadora."""
 
@@ -58,6 +64,7 @@ class CalculadoraApp:
         self.display = tk.StringVar()
         self._erro_exibido = False
         self._resultado_exibido = False
+        self.historico: List[str] = []
         self.criar_layout()
 
     def criar_layout(self) -> None:
@@ -118,6 +125,28 @@ class CalculadoraApp:
             colspan = 2 if texto == "0" else 1
             botao.grid(row=linha, column=coluna, columnspan=colspan, sticky="nsew", padx=3, pady=3)
 
+        painel_historico = tk.LabelFrame(
+            self.raiz,
+            text="Histórico recente",
+            font=("Segoe UI", 10),
+            bg="#202124",
+            fg="#f1f3f4",
+            padx=8,
+            pady=8,
+        )
+        painel_historico.grid(row=0, column=4, rowspan=6, sticky="nsew", padx=(10, 0))
+        self.lista_historico = tk.Listbox(
+            painel_historico,
+            width=28,
+            height=16,
+            font=("Segoe UI", 10),
+            bd=0,
+            bg="#303134",
+            fg="#f1f3f4",
+            selectbackground="#5f6368",
+        )
+        self.lista_historico.pack(fill="both", expand=True)
+
     def atualizar_display(self, valor: str) -> None:
         self.display.set(valor)
 
@@ -145,8 +174,18 @@ class CalculadoraApp:
 
     def limpar(self) -> None:
         self.atualizar_display("")
+        self.historico.clear()
+        self.lista_historico.delete(0, tk.END)
         self._erro_exibido = False
         self._resultado_exibido = False
+
+    def adicionar_ao_historico(self, expressao: str, resultado: Numero) -> None:
+        registro = "{} = {}".format(expressao, _formatar_resultado(resultado))
+        self.historico.insert(0, registro)
+        del self.historico[10:]
+        self.lista_historico.delete(0, tk.END)
+        for item in self.historico:
+            self.lista_historico.insert(tk.END, item)
 
     def calcular_display(self) -> None:
         expressao = self.display.get()
@@ -155,11 +194,8 @@ class CalculadoraApp:
         except ValueError as erro:
             self.tratar_erro(str(erro))
             return
-        if isinstance(resultado, float):
-            valor_formatado = format(resultado, ".12g")
-        else:
-            valor_formatado = str(resultado)
-        self.atualizar_display(valor_formatado)
+        self.adicionar_ao_historico(expressao, resultado)
+        self.atualizar_display(_formatar_resultado(resultado))
         self._resultado_exibido = True
 
 
